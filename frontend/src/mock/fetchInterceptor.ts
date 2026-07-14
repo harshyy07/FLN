@@ -609,6 +609,23 @@ export function setupFetchInterceptor() {
         });
       }
 
+      // 17b. POST /api/worksheets/generate-level-pdf
+      // Called from teacher roster "Print Lx.y" per-student button
+      if (path === '/api/worksheets/generate-level-pdf' && method === 'POST') {
+        if (!currentUser) return errorResponse('Unauthorized', 401);
+        const { studentId } = bodyData;
+        const student = db.students.find(s => s.id === studentId);
+        if (!student) return errorResponse('Student not found.', 404);
+
+        // Redirect to the in-browser interactive generator for this level+sublevel
+        const level = student.currentLevel;
+        const sub = student.currentSubLevel || 0;
+        return jsonResponse({
+          success: true,
+          pdfUrl: `/worksheets/levels_main.html?level=${level}&sub=${sub}`
+        });
+      }
+
       // 18. POST /api/evaluation/submit
       if (path === '/api/evaluation/submit' && method === 'POST') {
         if (!currentUser) return errorResponse('Unauthorized', 401);
