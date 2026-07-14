@@ -643,7 +643,7 @@ async function startServer() {
     });
 
     // Create a special Evaluation Report with dynamic mock concept mastery
-    const conceptMastery: { [key: string]: string } = {
+    const conceptMastery: { [key: string]: 'Strong' | 'Needs Practice' | 'Satisfactory' } = {
       'Number Sense': recommendedLevel >= 15 ? 'Strong' : 'Needs Practice',
       'Shapes': recommendedLevel >= 25 ? 'Strong' : 'Needs Practice',
       'Fractions': recommendedLevel >= 35 ? 'Strong' : 'Needs Practice',
@@ -1053,6 +1053,98 @@ async function startServer() {
       res.status(500).json({ success: false, error: err.message });
     }
   });
+
+  // Generate Customized Personalized Worksheet PDF for a student or class (automated bulk)
+  app.post('/api/worksheets/generate-custom-pdf', async (req, res) => {
+    const user = getAuthUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { classId, studentId, difficultyOverride, questionCount, includeSolutions } = req.body;
+    if (!classId) {
+      return res.status(400).json({ error: 'classId is required.' });
+    }
+
+    try {
+      const classes = await dbStore.getClasses();
+      const classObj = classes.find(c => c.id === classId);
+      if (!classObj) return res.status(404).json({ error: 'Class not found.' });
+
+      const students = await dbStore.getStudents();
+      let targetStudents = [];
+
+      if (studentId) {
+        const student = students.find(s => s.id === studentId);
+        if (!student) return res.status(404).json({ error: 'Student not found.' });
+        targetStudents = [student];
+      } else {
+        // Bulk: all students in class
+        targetStudents = students.filter(
+          s => s.classGroup === classObj.className && s.section === classObj.section && s.schoolId === classObj.schoolId
+        );
+      }
+
+      if (targetStudents.length === 0) {
+        return res.status(400).json({ error: 'No students found for generation.' });
+      }
+
+      // Generate personalized questions per student
+      const studentsWithQuestions = [];
+      for (const s of targetStudents) {
+        const lvl = s.currentLevel || 1;
+        // Map difficultyOverride or use student's current sublevel
+        let subLvl = s.currentSubLevel || 0;
+        if (difficultyOverride === 'easy') subLvl = 1;
+        else if (difficultyOverride === 'medium') subLvl = 0;
+        else if (difficultyOverride === 'hard') subLvl = 0; // standard mastery
+        
+        // Generate questions using levelGenerator
+        const rawQs = generateQuestionsForLevel(lvl, subLvl);
+        
+        // Slice to requested count (max 4 per level standard, but if they want more we can duplicate or fetch neighboring levels)
+        let qs = [...rawQs];
+        const count = questionCount ? parseInt(questionCount) : 10;
+        
+        // If they requested more than 4, let's generate from neighboring levels or pad them
+        if (count > qs.length) {
+          // fetch from neighboring levels if possible
+          let currentFetchLvl = lvl;
+          while (qs.length < count && currentFetchLvl < 59) {
+            currentFetchLvl++;
+            qs = [...qs, ...generateQuestionsForLevel(currentFetchLvl, subLvl)];
+          }
+        }
+        qs = qs.slice(0, count);
+
+        // Map question IDs to be student-specific
+        const mappedQs = qs.map((q, idx) => ({
+          ...q,
+          question_id: `${s.id}_custom_q_${idx}`,
+          question: q.question
+        }));
+
+        studentsWithQuestions.push({
+          name: s.name,
+          currentLevel: lvl,
+          currentSubLevel: subLvl,
+          questions: mappedQs
+        });
+      }
+
+      const { generateCustomWorksheetPdf } = await import('./paperGenerator');
+      const result = await generateCustomWorksheetPdf({
+        className: classObj.className,
+        section: classObj.section,
+        studentsWithQuestions,
+        includeSolutions: !!includeSolutions
+      });
+
+      res.json({ success: true, pdfUrl: result.pdfUrl });
+    } catch (err: any) {
+      console.error('Custom worksheet generation failed:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
 
   // Submit Completed Worksheet (ICR Structured Ingestion) & Scoring Engine
   app.post('/api/evaluation/submit', async (req, res) => {
