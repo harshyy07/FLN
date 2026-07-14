@@ -267,15 +267,13 @@ export const WorksheetWorkflow: React.FC<WorksheetWorkflowProps> = ({ classGroup
                   <button
                     onClick={generateWorksheetPdf}
                     disabled={pdfGenerating}
-                    className="font-mono text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-sm transition-opacity"
-                    style={{ background: '#4f46e5', color: '#ffffff', border: '1px solid #4338ca' }}
+                    className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-mono text-xs font-semibold px-3 py-1.5 rounded border border-zinc-200 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                   >
                     {pdfGenerating ? 'Generating PDF...' : pdfUrl ? '🔄 Regenerate PDF' : '📄 Generate Worksheet PDF'}
                   </button>
                   <button
                     onClick={() => window.print()}
-                    className="font-mono text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 cursor-pointer shadow-sm"
-                    style={{ background: '#d97706', color: '#ffffff', border: '1px solid #b45309' }}
+                    className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-mono text-xs font-semibold px-3 py-1.5 rounded border border-zinc-200 flex items-center gap-1.5 cursor-pointer"
                   >
                     🖨 Bulk Print A4
                   </button>

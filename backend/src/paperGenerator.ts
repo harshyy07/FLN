@@ -235,7 +235,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;margin:0;background:#fff;color:var(
       </div>
     </body></html>`;
 
-    await printPage.setContent(wrappedHtml, { waitUntil: 'networkidle0' as any, timeout: 15000 });
+    await printPage.setContent(wrappedHtml, { waitUntil: 'networkidle0', timeout: 15000 });
     await printPage.setViewport({ width: 794, height: 1123 });
 
     const pdfBuffer = await printPage.pdf({
@@ -345,7 +345,7 @@ export async function renderWorksheetPdf({
       borderWidth: 1,
     });
 
-    page.drawText(sanitizeText(`STUDENT: ${swq.name.toUpperCase()}`), {
+    page.drawText(`STUDENT: ${swq.name.toUpperCase()}`, {
       x: 65,
       y: height - 125,
       size: 10,
@@ -353,7 +353,7 @@ export async function renderWorksheetPdf({
       color: rgb(0.05, 0.2, 0.15),
     });
 
-    page.drawText(sanitizeText(`FLN PLACEMENT: Level ${swq.currentLevel}.${swq.currentSubLevel}`), {
+    page.drawText(`FLN PLACEMENT: Level ${swq.currentLevel}.${swq.currentSubLevel}`, {
       x: 65,
       y: height - 140,
       size: 8.5,
@@ -361,7 +361,7 @@ export async function renderWorksheetPdf({
       color: rgb(0.4, 0.45, 0.5),
     });
 
-    page.drawText(sanitizeText(`DATE: ${new Date().toLocaleDateString()}`), {
+    page.drawText(`DATE: ${new Date().toLocaleDateString()}`, {
       x: width - 200,
       y: height - 125,
       size: 8.5,
@@ -372,7 +372,7 @@ export async function renderWorksheetPdf({
     // Draw student-specific personalized questions
     let currentY = height - 220;
     swq.questions.slice(0, 4).forEach((q, idx) => {
-      page.drawText(sanitizeText(`Q${idx + 1}. [${q.topic}] ${q.question}`), {
+      page.drawText(`Q${idx + 1}. [${q.topic}] ${q.question}`, {
         x: 50,
         y: currentY,
         size: 10.5,
@@ -406,218 +406,6 @@ export async function renderWorksheetPdf({
   const fileName = `worksheet_${worksheetId}_${randomUUID()}.pdf`;
   const filePath = path.join(OUTPUT_DIR, fileName);
   fs.writeFileSync(filePath, mergedBuffer);
-
-  return {
-    fileName,
-    filePath,
-    pdfUrl: `/output/${fileName}`
-  };
-}
-
-function sanitizeText(str: string): string {
-  if (!str) return '';
-  return str
-    .replace(/★/g, '*')
-    .replace(/🍎/g, 'O')
-    .replace(/🎈/g, 'o')
-    .replace(/🖐️/g, '[hand]')
-    .replace(/🖐/g, '[hand]')
-    .replace(/⭐/g, '*')
-    .replace(/💵/g, '[rupee]')
-    .replace(/🍬/g, '[candy]')
-    .replace(/✏️/g, '[pencil]')
-    .replace(/✏/g, '[pencil]')
-    .replace(/🌸/g, '[flower]')
-    .replace(/🐱/g, '[cat]')
-    .replace(/🐶/g, '[dog]')
-    .replace(/🐠/g, '[fish]')
-    .replace(/🍉/g, '[melon]')
-    .replace(/🥚/g, '[egg]')
-    .replace(/🥕/g, '[carrot]')
-    .replace(/🍪/g, '[cookie]')
-    .replace(/🍌/g, '[banana]')
-    .replace(/🧀/g, '[cheese]')
-    .replace(/[^\x00-\x7F]/g, ''); // Remove other non-ASCII chars
-}
-
-export async function generateCustomWorksheetPdf({
-  className,
-  section,
-  studentsWithQuestions,
-  includeSolutions
-}: {
-  className: string;
-  section: string;
-  studentsWithQuestions: Array<{
-    name: string;
-    currentLevel: number;
-    currentSubLevel: number;
-    questions: Question[];
-  }>;
-  includeSolutions: boolean;
-}): Promise<WorksheetPdfResult> {
-  const merged = await PDFDocument.create();
-  const font = await merged.embedFont(StandardFonts.Helvetica);
-  const boldFont = await merged.embedFont(StandardFonts.HelveticaBold);
-
-  // Generate a page for each student
-  for (let i = 0; i < studentsWithQuestions.length; i++) {
-    const swq = studentsWithQuestions[i];
-    const page = merged.addPage([595.28, 841.89]);
-    const { width, height } = page.getSize();
-
-    page.drawRectangle({
-      x: 0,
-      y: height - 15,
-      width: width,
-      height: 15,
-      color: rgb(0.3, 0.2, 0.6), // Custom deep purple theme
-    });
-
-    page.drawText(`PERSONALIZED PRACTICE WORKSHEET`, {
-      x: 50,
-      y: height - 60,
-      size: 15,
-      font: boldFont,
-      color: rgb(0.3, 0.2, 0.6),
-    });
-
-    page.drawText(sanitizeText(`CLASS: ${className} - Section ${section} | INDIVIDUAL STUDY PLAN`), {
-      x: 50,
-      y: height - 80,
-      size: 10,
-      font: boldFont,
-      color: rgb(0.4, 0.45, 0.5),
-    });
-
-    // Student Info Card
-    page.drawRectangle({
-      x: 50,
-      y: height - 150,
-      width: width - 100,
-      height: 50,
-      color: rgb(0.97, 0.96, 0.99),
-      borderColor: rgb(0.88, 0.85, 0.92),
-      borderWidth: 1,
-    });
-
-    page.drawText(sanitizeText(`STUDENT: ${swq.name.toUpperCase()}`), {
-      x: 65,
-      y: height - 125,
-      size: 10,
-      font: boldFont,
-      color: rgb(0.15, 0.05, 0.25),
-    });
-
-    page.drawText(sanitizeText(`FLN PLACEMENT: Level ${swq.currentLevel}.${swq.currentSubLevel}`), {
-      x: 65,
-      y: height - 140,
-      size: 8.5,
-      font: font,
-      color: rgb(0.4, 0.45, 0.5),
-    });
-
-    page.drawText(sanitizeText(`DATE: ${new Date().toLocaleDateString()}`), {
-      x: width - 200,
-      y: height - 125,
-      size: 8.5,
-      font: font,
-      color: rgb(0.4, 0.45, 0.5),
-    });
-
-    // Draw custom questions (can be more than 4, so handle layout)
-    let currentY = height - 200;
-    swq.questions.forEach((q, idx) => {
-      page.drawText(sanitizeText(`Q${idx + 1}. [${q.topic}] ${q.question}`), {
-        x: 50,
-        y: currentY,
-        size: 9.5,
-        font: boldFont,
-        color: rgb(0.15, 0.15, 0.15),
-      });
-
-      page.drawRectangle({
-        x: 50,
-        y: currentY - 35,
-        width: 250,
-        height: 20,
-        color: rgb(1, 1, 1),
-        borderColor: rgb(0.8, 0.8, 0.8),
-        borderWidth: 1,
-      });
-
-      currentY -= 65;
-    });
-
-    page.drawText(sanitizeText(`Custom Practice Sheet · Student: ${swq.name}`), {
-      x: 50,
-      y: 40,
-      size: 7.5,
-      font: font,
-      color: rgb(0.6, 0.6, 0.6),
-    });
-  }
-
-  // Generate Answer Key page if requested
-  if (includeSolutions) {
-    const page = merged.addPage([595.28, 841.89]);
-    const { width, height } = page.getSize();
-
-    page.drawRectangle({
-      x: 0,
-      y: height - 15,
-      width: width,
-      height: 15,
-      color: rgb(0.7, 0.1, 0.2), // Deep red/rose theme for solutions
-    });
-
-    page.drawText(`ANSWER KEY / SOLUTIONS MANUAL`, {
-      x: 50,
-      y: height - 60,
-      size: 15,
-      font: boldFont,
-      color: rgb(0.7, 0.1, 0.2),
-    });
-
-    page.drawText(sanitizeText(`CLASS: ${className} - Section ${section} | TEACHER REFERENCE ONLY`), {
-      x: 50,
-      y: height - 80,
-      size: 10,
-      font: boldFont,
-      color: rgb(0.4, 0.45, 0.5),
-    });
-
-    let currentY = height - 140;
-    studentsWithQuestions.forEach((swq) => {
-      page.drawText(sanitizeText(`Student: ${swq.name.toUpperCase()} (L${swq.currentLevel}.${swq.currentSubLevel})`), {
-        x: 50,
-        y: currentY,
-        size: 11,
-        font: boldFont,
-        color: rgb(0.1, 0.1, 0.1),
-      });
-      currentY -= 20;
-
-      swq.questions.forEach((q, idx) => {
-        page.drawText(sanitizeText(`Q${idx + 1}: ${q.answer}`), {
-          x: 70,
-          y: currentY,
-          size: 9.5,
-          font: font,
-          color: rgb(0.2, 0.2, 0.2),
-        });
-        currentY -= 15;
-      });
-
-      currentY -= 15; // spacing between students
-    });
-  }
-
-  const worksheetId = 'CWS_' + Math.floor(1000 + Math.random() * 9000);
-  const fileName = `custom_worksheet_${worksheetId}_${randomUUID()}.pdf`;
-  const filePath = path.join(OUTPUT_DIR, fileName);
-  const pdfBuffer = Buffer.from(await merged.save());
-  fs.writeFileSync(filePath, pdfBuffer);
 
   return {
     fileName,
